@@ -3,6 +3,7 @@ import json
 import string
 import random
 import shutil
+import logging
 import asyncio
 import websockets
 
@@ -11,6 +12,11 @@ from datetime import datetime
 from ps2 import statement
 from ps2.app import PS2 as PS2
 
+
+logging.basicConfig(
+    format="%(asctime)s %(message)s",
+    level=logging.INFO,
+)
 
 FOLDER    = "tmp"
 TIMEOUT   = 60
