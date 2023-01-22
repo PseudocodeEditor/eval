@@ -5,7 +5,7 @@ description = ""
 authors = ["Coding-Cactus <codingcactus.cc@gmail.com>"]
 license = "MIT"
 readme = "README.md"
-packages = [{include = "pseudonaja_eval"}]
+packages = []
 
 [tool.poetry.dependencies]
 python = "^3.10"
