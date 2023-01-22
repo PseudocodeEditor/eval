@@ -4,3 +4,4 @@ replit.nix
 venv/
 .idea/
 tmp/
+__pycache__/
