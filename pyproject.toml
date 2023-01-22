@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "pseudonaja-eval"
+version = "0.1.0"
+description = ""
+authors = ["Coding-Cactus <codingcactus.cc@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+packages = [{include = "pseudonaja_eval"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+websockets = "^10.4"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
