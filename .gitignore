@@ -1,0 +1,6 @@
+.replit
+replit.nix
+.config
+venv/
+.idea/
+tmp/
