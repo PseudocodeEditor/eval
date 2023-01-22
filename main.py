@@ -6,6 +6,8 @@ import shutil
 import asyncio
 import websockets
 
+from datetime import datetime
+
 from ps2 import statement
 from ps2.app import PS2 as PS2
 
@@ -131,17 +133,30 @@ async def add_to_queue(ws, msg):
     }))
 
 
+def log(msg_type):
+    colour = "\033[31m" if msg_type == "UNKNOWN" else "\033[32m"
+    print(f"[{colour}{msg_type}\033[0m] {datetime.now()}")
+
 async def handle_messages(ws):
     global waiting_for_input
 
     async for message in ws:
         msg = json.loads(message)
 
-        if msg["type"] == "RUN":
+        if "type" not in msg or msg["type"] not in ["RUN", "INPUT", "STOP"]:
+            log("UNKNOWN")
+            continue
+
+        log(msg["type"])
+
+        if msg["type"] == "RUN" and "files" in msg:
             await add_to_queue(ws, msg)
-        elif msg["type"] == "INPUT" and waiting_for_input["waiting"] and waiting_for_input["key"] == msg["key"]:
+        elif (
+                msg["type"] == "INPUT" and waiting_for_input["waiting"] and
+                "key" in msg and waiting_for_input["key"] == msg["key"] and "text" in msg
+        ):
             waiting_for_input["text"] = msg["text"]
-        elif msg["type"] == "STOP":
+        elif msg["type"] == "STOP" and "key" in msg:
             i = get_run_queue_index(msg["key"])
             if i is not None:
                 if i == 0 and PS2.running_process is not None:
@@ -185,7 +200,7 @@ async def eval_queue():
 async def main():
     asyncio.create_task(eval_queue())
 
-    async with websockets.serve(handle_messages, "0.0.0.0", 5000):
+    async with websockets.serve(handle_messages, "localhost", 5000):
         await asyncio.Future()
 
 
