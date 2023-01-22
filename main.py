@@ -48,7 +48,7 @@ async def input_override(*args, **kwargs):
 async def print_override(*args, sep=' ', end='\n', file=None, error=False):
     await run_queue[0]["ws"].send(json.dumps({
         "type": "ERROR" if error else "OUTPUT",
-        "text": " ".join(args),
+        "text": " ".join(list(map(str, args))),
         "end": end
     }))
 
