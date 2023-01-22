@@ -200,7 +200,7 @@ async def eval_queue():
 async def main():
     asyncio.create_task(eval_queue())
 
-    async with websockets.serve(handle_messages, "localhost", 5000):
+    async with websockets.serve(handle_messages, "0.0.0.0", 5000):
         await asyncio.Future()
 
 
