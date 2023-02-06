@@ -108,8 +108,8 @@ class DECLARE_ARRAY ( Statement ):
         value = []
         if len(self.dimensions) == 1:
 
-            start = self.dimensions[0][0].evaluate()
-            end =   self.dimensions[0][1].evaluate()
+            start = await self.dimensions[0][0].evaluate()
+            end =   await self.dimensions[0][1].evaluate()
             
             if start > end or start < 0:
                 raise RuntimeError([self.line, f"ARRAY declaration start index > end index or start index < 0"])
@@ -124,16 +124,16 @@ class DECLARE_ARRAY ( Statement ):
 
         elif len(self.dimensions) == 2:
 
-            start1 = self.dimensions[0][0].evaluate()
-            end1 =   self.dimensions[0][1].evaluate()
+            start1 = await self.dimensions[0][0].evaluate()
+            end1 =   await self.dimensions[0][1].evaluate()
 
             if start1 > end1 or start1 < 0:
                 raise RuntimeError([self.line, f"ARRAY declaration start index > end index or start index < 0"])
 
             value = [ None for _ in range( end1- start1 + 1) ]
 
-            start2 = self.dimensions[1][0].evaluate()
-            end2 =   self.dimensions[1][1].evaluate()
+            start2 = await self.dimensions[1][0].evaluate()
+            end2 =   await self.dimensions[1][1].evaluate()
 
             if start2 > end2 or start2 < 0:
                 raise RuntimeError([self.line, f"ARRAY declaration start index > end index or start index < 0"])
@@ -169,10 +169,10 @@ class ARRAY_ASSIGN ( Statement ):
         if not isinstance(symbol, Array_Symbol):
             raise RuntimeError([self.line, f"symbol {self.vname} is not an array"])
 
-        expr  = self.expr.evaluate()
+        expr  = await self.expr.evaluate()
         assert expr != None, "ARRAY_ASSIGN expr == None"
 
-        index1 = self.indices[0].evaluate()
+        index1 = await self.indices[0].evaluate()
         index2 = None
 
         if not symbol.is1d: # its a 2D array
@@ -180,7 +180,7 @@ class ARRAY_ASSIGN ( Statement ):
             if len(self.indices) != 2: # check to see the correct number of indices have been provided
                 raise RuntimeError([self.line, f"{self.vname} is a 2D array, but only 1 idex provided"])
                 
-            index2 = self.indices[1].evaluate()
+            index2 = await self.indices[1].evaluate()
 
         symbol.set_value(self.line, expr, index1, index2)
 
@@ -195,7 +195,7 @@ class ASSIGN ( Statement ):
         self.line = line
 
     async def interpret(self):
-        value  = self.expr.evaluate()
+        value  = await self.expr.evaluate()
 
         symbol = environ.get_variable(self.vname)
         if symbol.is_constant:
@@ -258,7 +258,7 @@ class PRINT ( Statement ):
 
         for expr in self.exprlist:
 
-            value = expr.evaluate()
+            value = await expr.evaluate()
 
             if value == None:
                 raise RuntimeError([self.line, "No expression to print"])
@@ -317,7 +317,7 @@ class WHILE ( Statement ):
         
         environ.push({}) # push new scope to stack
         
-        while self.condition.evaluate() == True:
+        while await self.condition.evaluate() == True:
 
             for stmt in self.statement_list:
                 await stmt.interpret()
@@ -341,7 +341,7 @@ class REPEAT ( Statement ):
             for stmt in self.statement_list:
                 await stmt.interpret()
 
-            if self.condition.evaluate() == True:
+            if await self.condition.evaluate() == True:
                 break
                 
         environ.pop() # pop scope
@@ -373,10 +373,10 @@ class FOR ( Statement ):
         # Create a range iterator for the FOR loop depending is a step is defined
 
 
-        r = range(self.assign.expr.evaluate(), self.expr.evaluate() + 1)
+        r = range(await self.assign.expr.evaluate(), await self.expr.evaluate() + 1)
 
         if self.step != None:
-            r = range(self.assign.expr.evaluate(), self.expr.evaluate() + 1, self.step.evaluate())
+            r = range(await self.assign.expr.evaluate(), await self.expr.evaluate() + 1, await self.step.evaluate())
 
         symbol = environ.get_variable(self.assign.vname)
 
@@ -403,7 +403,7 @@ class IF ( Statement ):
 
     async def interpret(self):
 
-        if self.condition.evaluate() == True:
+        if await self.condition.evaluate() == True:
             environ.push({}) # push new scope to stack
 
             for stmt in self.statement_list:
@@ -425,7 +425,7 @@ class IF_ELSE ( Statement ):
 
     async def interpret(self):
 
-        if self.condition.evaluate() == True:
+        if await self.condition.evaluate() == True:
 
             environ.push({}) # push new scope to stack
 
@@ -451,10 +451,10 @@ class CASE ( Statement ):
         self.cases = cases
         
     async def interpret(self):
-        value = self.expr.evaluate()
+        value = await self.expr.evaluate()
         for case in self.cases:
             if case[0] != None:
-                if value == case[0].evaluate():
+                if value == await case[0].evaluate():
                     environ.push({}) # push new scope to stack
                     statement_list = case[1]
                     
@@ -524,7 +524,7 @@ class CALL ( Statement ):
         if self.name == "DEBUG":
 
             if len(self.args) != 0:
-                arg = self.args[0].evaluate()
+                arg = await self.args[0].evaluate()
 
             if arg == "globals":
                 environ.dump_variables()
@@ -547,7 +547,7 @@ class CALL ( Statement ):
                     id_type = symbol.args[i][1]
                 
                     # Evaluate the argument and check that it is the required type
-                    arg = self.args[i].evaluate()
+                    arg = await self.args[i].evaluate()
 
                     if  util.check_type(arg, id_type, self.line) == False:
                         raise RuntimeError([self.line, f"Procedure {self.name} with arg='{arg}' doesn't match type {id_type}"])
@@ -583,7 +583,7 @@ class RETURN ( Statement ):
         # Use Python's exception mechanism to return from calling procedure / function
         expr = None
         if self.expr != None:
-            expr = self.expr.evaluate()
+            expr = await self.expr.evaluate()
             
         raise util.Return(expr)
 
@@ -596,7 +596,7 @@ class OPENFILE( Statement ):
 
     async def interpret(self):
 
-        name = self.handle.evaluate()
+        name = await self.handle.evaluate()
 
         mode = None
         if self.mode == TT.READ:
@@ -642,7 +642,7 @@ class CLOSEFILE ( Statement ):
 
     async def interpret(self):
 
-        name = self.handle.evaluate()
+        name = await self.handle.evaluate()
 
         handle = environ.get_variable(name)
 
@@ -666,7 +666,7 @@ class READFILE ( Statement ):
 
     async def interpret(self):
 
-        name = self.handle.evaluate()
+        name = await self.handle.evaluate()
 
         symbol = environ.get_variable(name)
 
@@ -696,13 +696,13 @@ class WRITEFILE ( Statement ):
 
     async def interpret(self):
 
-        name = self.handle.evaluate()
+        name = await self.handle.evaluate()
 
         symbol = environ.get_variable(name)
         
         handle = symbol._fileid
 
-        value = self.value.evaluate() 
+        value = await self.value.evaluate()
 
         try:
 

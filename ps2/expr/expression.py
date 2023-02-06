@@ -7,7 +7,7 @@ from ps2.symbol_table.environment import Environment as environ, Symbol, Functio
 class Expression(abc.ABC):
     
     @abc.abstractmethod
-    def evaluate(self):
+    async def evaluate(self):
         pass
 
 class UNARY(Expression):
@@ -15,9 +15,9 @@ class UNARY(Expression):
         self.operator = operator
         self.right  = right
 
-    def evaluate(self):
+    async def evaluate(self):
         
-        right_value  = self.right.evaluate()
+        right_value  = await self.right.evaluate()
 
         if self.operator.lexeme == '-':
             return -right_value
@@ -35,10 +35,10 @@ class BINARY(Expression):
         self.right  = right 
         self.line = line
 
-    def evaluate(self):
+    async def evaluate(self):
 
-        left_value   = self.left.evaluate()
-        right_value  = self.right.evaluate()
+        left_value   = await self.left.evaluate()
+        right_value  = await self.right.evaluate()
 
         op = self.operator.type
 
@@ -132,7 +132,7 @@ class LITERAL(Expression):
         self.expression = expression
         self.line = line
 
-    def evaluate(self):
+    async def evaluate(self):
         if self.expression == None:
             raise RuntimeError([self.line, "missing expression in literal ()"])
             
@@ -143,21 +143,21 @@ class GROUPING(Expression):
         self.expression = expression
         self.line = line
 
-    def evaluate(self):
+    async def evaluate(self):
         if self.expression == None:
             raise RuntimeError([self.line, "missing expression in group ()"])
-        return self.expression.evaluate()
+        return await self.expression.evaluate()
 
 class IDENTIFIER(Expression):
     def __init__(self, name, line):
         self.name = name
         self.line = line
 
-    def evaluate(self):
+    async def evaluate(self):
         v = environ.get_variable(self.name)
         ### Added code for functions without args, and ()
         if type(v) == Function_Symbol:
-            return FUNCTION(self.name, [], self.line).evaluate()
+            return await FUNCTION(self.name, [], self.line).evaluate()
         else:
             return v.value
 
@@ -167,14 +167,14 @@ class ARRAY(Expression):
         self.indices = expression_list
         self.line = line
 
-    def evaluate(self):
+    async def evaluate(self):
 
         symbol = environ.get_variable(self.name)
 
-        index1 = self.indices[0].evaluate()
+        index1 = await self.indices[0].evaluate()
         index2 = None
         if not symbol.is1d:
-            index2 = self.indices[1].evaluate()
+            index2 = await self.indices[1].evaluate()
 
         return symbol.get_value(self.line, index1, index2)
         
@@ -184,14 +184,14 @@ class ARRAY_UDT(ARRAY):
         super().__init__(self, name, expression_list, line)
         self.udt_field = field
         
-    def evaluate(self):
+    async def evaluate(self):
 
         symbol = environ.get_variable(self.name)
 
-        index1 = self.indices[0].evaluate()
+        index1 = await self.indices[0].evaluate()
         index2 = None
         if not symbol.is1d:
-            index2 = self.indices[1].evaluate()
+            index2 = await self.indices[1].evaluate()
 
         return symbol.get_value(self.line, index1, index2)
 ### Currently being worked on
@@ -203,7 +203,7 @@ class FUNCTION(Expression):
         self.line = line
 
 
-    def evaluate(self):
+    async def evaluate(self):
 
         # Check if any internal functions match
         if self.name == "INT":
@@ -222,8 +222,8 @@ class FUNCTION(Expression):
                 raise RuntimeError([self.line, f"RAND() requires 2 arguments, it received {len(self.args)}"])
 
             from random import randint
-            start = self.args[0].evaluate()
-            end   = self.args[1].evaluate()
+            start = await self.args[0].evaluate()
+            end   = await self.args[1].evaluate()
 
             if type(start) == int and type(end) == int:
                 return randint(start, end)
@@ -234,13 +234,13 @@ class FUNCTION(Expression):
         elif self.name == "RIGHT":
             if len(self.args) != 2:
                 raise RuntimeError([self.line, f"RIGHT() requires 2 arguments, it received {len(self.args)}"])
-            this_string = self.args[0].evaluate()
+            this_string = await self.args[0].evaluate()
 
             # Check that this is a string
             if type(this_string) != str:
                 raise RuntimeError([self.line, f"RIGHT() requires a STRING, not '{this_string}'"])    
 
-            x = self.args[1].evaluate()
+            x = await self.args[1].evaluate()
             if type(x) != int:
                 raise RuntimeError([self.line, f"RIGHT() requires an INTEGER length, not '{x}'"])    
 
@@ -249,7 +249,7 @@ class FUNCTION(Expression):
         elif self.name == "LENGTH":
             if len(self.args) != 1:
                 raise RuntimeError([self.line, f"LENGTH() function expected 1 argument, it got {len(self.args)}"])
-            this_string = self.args[0].evaluate()
+            this_string = await self.args[0].evaluate()
 
             # Check that this is a string
             if type(this_string) != str:
@@ -261,14 +261,14 @@ class FUNCTION(Expression):
             if len(self.args) != 3:
                 raise RuntimeError([self.line, f"MID() requires 3 arguments, it received {len(self.args)}"])
 
-            this_string = self.args[0].evaluate()
+            this_string = await self.args[0].evaluate()
 
             # Check that this is a string
             if type(this_string) != str:
                 raise RuntimeError([self.line, f"MID() requires a STRING, not '{this_string}'"])    
 
-            start = self.args[1].evaluate()
-            x     = self.args[2].evaluate() - 1
+            start = await self.args[1].evaluate()
+            x     = await self.args[2].evaluate() - 1
 
             if type(start) == int and type(x) == int:
 
@@ -284,7 +284,7 @@ class FUNCTION(Expression):
             if len(self.args) != 1:
                 raise RuntimeError([self.line, f"UCASE() function requires 1 argument, it received {len(self.args)}"])
 
-            char  = self.args[0].evaluate()
+            char  = await self.args[0].evaluate()
             if not util.isChar(char):
                 raise RuntimeError([self.line, f"UCASE() argument should be of type CHAR"])
 
@@ -294,7 +294,7 @@ class FUNCTION(Expression):
             if len(self.args) != 1:
                 raise RuntimeError([self.line, f"LCASE() function requires 1 argument, it received {len(self.args)}"])
 
-            char  = self.args[0].evaluate()
+            char  = await self.args[0].evaluate()
             if not util.isChar(char):
                 raise RuntimeError([self.line, f"LCASE() argument should be of type CHAR"])
 
@@ -305,7 +305,7 @@ class FUNCTION(Expression):
             if len(self.args) != 1:
                 raise RuntimeError([self.line, f"EOF() function requires 1 argument, it received {len(self.args)}"])
 
-            fileid  = self.args[0].evaluate()
+            fileid  = await self.args[0].evaluate()
             symbol = environ.get_variable(fileid)
 
             try:
@@ -344,7 +344,7 @@ class FUNCTION(Expression):
                 # environ.add_variable(Symbol(id_name, id_type , self.args[i].evaluate())) 
                 
                 # Evaluate the argument and check that it is the required type
-                arg = self.args[i].evaluate()
+                arg = await self.args[i].evaluate()
 
                 if  util.check_type(arg, id_type, self.line) == False:
                     raise RuntimeError([self.line, f"Function {self.name} with arg='{arg}' doesn't match type {id_type}"])
@@ -356,7 +356,7 @@ class FUNCTION(Expression):
                 # Run the body of the function, until it returns
                 return_val = None
                 for stmt in symbol.stmt_list:
-                    stmt.interpret()
+                    await stmt.interpret()
 
             # Function has returned
             except util.Return as r:
