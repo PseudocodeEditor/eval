@@ -59,7 +59,7 @@ class Environment:
 
         if len(Environment.scopes) != 0:
             for i in range(len(Environment.scopes)):
-                scope = Environment.scopes[i].variables
+                scope = Environment.scopes[i]
                 
                 if vname in scope:
                     del scope[vname]
