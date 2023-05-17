@@ -57,11 +57,11 @@ class PS2:
             await PS2.report(e.msg[0], "Syntax", e.msg[1])
 
         if not PS2.hadError:
-            # try:
+            try:
                 await Interpretor(statements).interpret()
-            # except RuntimeError as e:
-            #     await PS2.report(e.args[0][0], "Runtime", e.args[0][1])
-            #     PS2.hadError = False
+            except RuntimeError as e:
+                await PS2.report(e.args[0][0], "Runtime", e.args[0][1])
+                PS2.hadError = False
                 
         else:
             PS2.hadError = False
